@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Workout Interval Timer</title>
+    <style>
+        :root {
+            --c-countdown: #f39c12; /* Oranje */
+            --c-work: #e91e63;      /* Roze */
+            --c-rest: #27ae60;      /* Groen */
+            --c-primary: #3498db;   /* Blauw */
+            --c-text: #ffffff;
+            --c-bg: #1a1a1a;
+            --c-card-bg: #2c2c2e;
+            --c-menu-bg: #444444;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-weight: 700;
+            background-color: var(--c-bg);
+            color: var(--c-text);
+        }
+
+        /* --- Algemene Stijlen --- */
+        .screen { display: none; }
+        .screen.active { display: flex; }
+
+        /* --- Keuzescherm --- */
+        #selection-screen {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        
+        #selection-screen h1 {
+            font-size: clamp(2rem, 8vw, 4rem);
+            margin-bottom: 30px;
+            color: var(--c-primary);
+        }
+
+        #workout-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .workout-btn {
+            background-color: var(--c-card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .workout-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .workout-btn .info { text-align: left; cursor: pointer; flex-grow: 1; }
+        .workout-btn .title { font-size: clamp(1.2rem, 4vw, 1.6rem); font-weight: bold; }
+        .workout-btn .details { font-size: clamp(0.8rem, 2vw, 1rem); opacity: 0.7; margin-top: 5px; }
+        
+        .actions { position: relative; }
+        .actions .menu-btn {
+            background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; opacity: 0.6;
+            padding: 10px; line-height: 1;
+        }
+        .actions .menu-btn:hover { opacity: 1; color: var(--c-primary); }
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background-color: var(--c-menu-bg);
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 10;
+            overflow: hidden;
+            width: 150px;
+        }
+        .menu-dropdown.active { display: block; }
+        .menu-dropdown a {
+            display: block;
+            padding: 12px 15px;
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: normal;
+            text-align: left;
+        }
+        .menu-dropdown a:hover { background-color: rgba(255, 255, 255, 0.1); }
+        
+        .new-workout-btn {
+            background-color: var(--c-primary); border: none; padding: 15px 30px; font-size: 1.2rem;
+            border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: bold; color: white;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .new-workout-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        /* --- Editor Scherm --- */
+        #editor-screen {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: rgba(0,0,0,0.8);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        #editor-form {
+            background-color: #222; padding: 30px; border-radius: 15px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px 20px;
+            width: 90%; max-width: 500px;
+        }
+        #editor-form h2 { grid-column: 1 / -1; margin: 0 0 10px 0; text-align: center; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { margin-bottom: 5px; font-size: 0.9rem; opacity: 0.8; }
+        .form-group input { background: #333; border: 1px solid #555; color: white; padding: 10px; border-radius: 5px; font-size: 1rem; }
+        #editor-controls { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 10px; }
+        #editor-controls button { padding: 10px 20px; border-radius: 5px; border: none; font-size: 1rem; cursor: pointer; }
+        #save-workout-btn { background-color: var(--c-primary); color: white; }
+        #cancel-workout-btn { background-color: #555; color: white; }
+
+        /* --- Timerscherm --- */
+        #timer-wrapper {
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            height: 100%;
+            padding: 5vh 5vw;
+            box-sizing: border-box;
+            position: absolute; top: 0; left: 0;
+            transition: background-color 0.5s ease-in-out;
+        }
+        #display-center {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex-grow: 1; text-align: center; position: relative;
+        }
+        #phase-display { text-transform: uppercase; letter-spacing: 2px; font-size: clamp(2rem, 6vw, 3.5rem); font-weight: bold; opacity: 0.9; }
+        #time-display {
+            font-size: clamp(8rem, 25vw, 20rem); line-height: 1; margin: 20px 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #time-colon { margin: 0 0.15em; transform: translateY(-5%); }
+        #progress-display { font-size: clamp(1.5rem, 4vw, 2.5rem); opacity: 0.8; }
+        #controls { display: flex; justify-content: center; align-items: center; gap: 20px; padding-bottom: 2vh; }
+        #controls button {
+            background: transparent; border: 2px solid var(--c-text); color: var(--c-text); border-radius: 50%;
+            width: 70px; height: 70px; font-size: 1.5rem; cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s, visibility 0.2s, width 0.3s ease;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #controls button:hover { background-color: rgba(255, 255, 255, 0.2); }
+        #controls button:active { transform: scale(0.9); }
+        #pause-btn { width: 90px; height: 90px; font-size: 2rem; }
+        #controls button.text-btn {
+            width: auto;
+            padding: 10px 40px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="selection-screen" class="screen active">
+        <h1>Mijn Workouts</h1>
+        <div id="workout-list"></div>
+        <button id="new-workout-btn" class="new-workout-btn">+ Nieuwe Workout Maken</button>
+    </div>
+
+    <div id="editor-screen" class="screen">
+        <form id="editor-form" autocomplete="off">
+            <h2>Workout Editor</h2>
+            <input type="hidden" id="workout-id">
+            <div class="form-group full-width">
+                <label for="workout-name">Naam</label>
+                <input type="text" id="workout-name" required>
+            </div>
+            <div class="form-group">
+                <label for="workout-work">Werk (sec)</label>
+                <input type="number" id="workout-work" value="30" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="workout-rest">Rust (sec)</label>
+                <input type="number" id="workout-rest" value="10" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="workout-sets">Sets</label>
+                <input type="number" id="workout-sets" value="8" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="workout-rounds">Rondes</label>
+                <input type="number" id="workout-rounds" value="4" min="1" required>
+            </div>
+             <div class="form-group">
+                <label for="workout-countdown">Aftellen (sec)</label>
+                <input type="number" id="workout-countdown" value="10" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="workout-long-rest">Lange Rust (sec)</label>
+                <input type="number" id="workout-long-rest" value="30" min="0" required>
+            </div>
+            <div id="editor-controls">
+                <button type="button" id="cancel-workout-btn">Annuleren</button>
+                <button type="submit" id="save-workout-btn">Opslaan</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="timer-wrapper" class="screen">
+        <div id="display-center">
+            <div id="phase-display"></div>
+            <div id="time-display">
+                <span id="time-minutes">00</span>
+                <span id="time-colon">:</span>
+                <span id="time-seconds">00</span>
+            </div>
+            <div id="progress-display"></div>
+        </div>
+
+        <div id="controls">
+            <button id="prev-btn" title="Vorige">⏮</button>
+            <button id="pause-btn" title="Start/Pauze">▶</button>
+            <button id="stop-btn" title="Stoppen">⏹</button>
+            <button id="next-btn" title="Volgende">⏭</button>
+        </div>
+    </div>
+    
+    <audio id="single-bell-sound" src="single_bell.mp3" preload="auto"></audio>
+    <audio id="double-bell-sound" src="double_bell.mp3" preload="auto"></audio>
+
+<script>
+    const STORAGE_KEY = 'intervalTimerWorkouts';
+
+    const DEFAULT_WORKOUTS = [
+        { id: 1, name: 'Warming-up', COUNTDOWN: 10, WORK: 20, REST: 10, LONG_REST: 30, SETS_PER_ROUND: 3, TOTAL_ROUNDS: 3 },
+        { id: 2, name: 'Circuit 6 Oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 8, TOTAL_ROUNDS: 3 },
+        { id: 3, name: 'Circuit 8 Oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 6, TOTAL_ROUNDS: 4 },
+        { id: 4, name: 'Core', COUNTDOWN: 10, WORK: 30, REST: 10, LONG_REST: 30, SETS_PER_ROUND: 3, TOTAL_ROUNDS: 3 }
+    ];
+
+    const dom = {
+        screens: document.querySelectorAll('.screen'),
+        selectionScreen: document.getElementById('selection-screen'),
+        editorScreen: document.getElementById('editor-screen'),
+        timerWrapper: document.getElementById('timer-wrapper'),
+        workoutList: document.getElementById('workout-list'),
+        newWorkoutBtn: document.getElementById('new-workout-btn'),
+        editorForm: document.getElementById('editor-form'),
+        workoutIdInput: document.getElementById('workout-id'),
+        cancelWorkoutBtn: document.getElementById('cancel-workout-btn'),
+        phase: document.getElementById('phase-display'),
+        progress: document.getElementById('progress-display'),
+        timeDisplay: document.getElementById('time-display'),
+        timeMinutes: document.getElementById('time-minutes'),
+        timeColon: document.getElementById('time-colon'),
+        timeSeconds: document.getElementById('time-seconds'),
+        prevBtn: document.getElementById('prev-btn'),
+        pauseBtn: document.getElementById('pause-btn'),
+        stopBtn: document.getElementById('stop-btn'),
+        nextBtn: document.getElementById('next-btn'),
+        singleBellSound: document.getElementById('single-bell-sound'),
+        doubleBellSound: document.getElementById('double-bell-sound')
+    };
+
+    let CONFIG = {};
+    let state = {};
+    let audioUnlocked = false;
+    let wakeLock = null;
+    let workouts = [];
+
+    const showScreen = (screenId) => {
+        dom.screens.forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    };
+
+    const loadWorkouts = () => {
+        const storedWorkouts = localStorage.getItem(STORAGE_KEY);
+        workouts = storedWorkouts ? JSON.parse(storedWorkouts) : DEFAULT_WORKOUTS;
+        if (!storedWorkouts) saveWorkouts();
+    };
+
+    const saveWorkouts = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+    };
+    
+    const renderWorkoutList = () => {
+        dom.workoutList.innerHTML = '';
+        workouts.forEach(w => {
+            const workoutCard = document.createElement('div');
+            workoutCard.className = 'workout-btn';
+            workoutCard.innerHTML = `
+                <div class="info" data-id="${w.id}">
+                    <div class="title">${w.name}</div>
+                    <div class="details">${w.TOTAL_ROUNDS} Ronden / ${w.SETS_PER_ROUND} Sets / ${w.WORK}s Werk / ${w.REST}s Rust</div>
+                </div>
+                <div class="actions">
+                    <button class="menu-btn" data-id="${w.id}" title="Menu">⋮</button>
+                    <div class="menu-dropdown" data-id="${w.id}">
+                        <a href="#" class="edit-btn" data-id="${w.id}">Wijzigen</a>
+                        <a href="#" class="delete-btn" data-id="${w.id}">Verwijderen</a>
+                    </div>
+                </div>
+            `;
+            dom.workoutList.appendChild(workoutCard);
+        });
+    };
+
+    const showEditor = (workout = null) => {
+        dom.editorForm.reset();
+        dom.workoutIdInput.value = '';
+        if (workout) {
+            dom.workoutIdInput.value = workout.id;
+            ['name', 'countdown', 'work', 'rest', 'sets', 'rounds', 'long-rest'].forEach(field => {
+                const keyMap = { sets: 'SETS_PER_ROUND', rounds: 'TOTAL_ROUNDS', 'long-rest': 'LONG_REST' };
+                const configKey = keyMap[field] || field.toUpperCase();
+                dom.editorForm.querySelector(`#workout-${field}`).value = workout[configKey];
+            });
+        }
+        showScreen('editor-screen');
+    };
+
+    const handleSaveWorkout = (event) => {
+        event.preventDefault();
+        const id = dom.workoutIdInput.value ? Number(dom.workoutIdInput.value) : Date.now();
+        const newWorkout = {
+            id,
+            name: dom.editorForm.querySelector('#workout-name').value || 'Mijn Workout',
+            COUNTDOWN: Number(dom.editorForm.querySelector('#workout-countdown').value),
+            WORK: Number(dom.editorForm.querySelector('#workout-work').value),
+            REST: Number(dom.editorForm.querySelector('#workout-rest').value),
+            SETS_PER_ROUND: Number(dom.editorForm.querySelector('#workout-sets').value),
+            TOTAL_ROUNDS: Number(dom.editorForm.querySelector('#workout-rounds').value),
+            LONG_REST: Number(dom.editorForm.querySelector('#workout-long-rest').value),
+        };
+
+        const index = workouts.findIndex(w => w.id === id);
+        if (index > -1) workouts[index] = newWorkout;
+        else workouts.push(newWorkout);
+        
+        saveWorkouts();
+        renderWorkoutList();
+        showScreen('selection-screen');
+    };
+
+    const handleDeleteWorkout = (id) => {
+        if (confirm('Weet je zeker dat je deze workout wilt verwijderen?')) {
+            workouts = workouts.filter(w => w.id !== id);
+            saveWorkouts();
+            renderWorkoutList();
+        }
+    };
+
+    const acquireWakeLock = async () => {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) { console.error(`${err.name}, ${err.message}`); }
+        }
+    };
+
+    const releaseWakeLock = () => {
+        if (wakeLock) {
+            wakeLock.release().then(() => { wakeLock = null; });
+        }
+    };
+    
+    const unlockAudio = () => {
+        if (audioUnlocked) return;
+        dom.singleBellSound.play().catch(()=>{});
+        dom.singleBellSound.pause();
+        dom.doubleBellSound.play().catch(()=>{});
+        dom.doubleBellSound.pause();
+        audioUnlocked = true;
+    };
+
+    const resetState = () => {
+        state = {
+            workoutKey: state.workoutKey,
+            currentRound: 1,
+            currentSet: 1,
+            phase: 'stopped',
+            timeLeft: CONFIG.COUNTDOWN,
+            intervalId: null,
+            isPaused: true
+        };
+    };
+
+    const playSingleBell = () => {
+        if (!audioUnlocked) return;
+        dom.singleBellSound.currentTime = 0;
+        dom.singleBellSound.play().catch(e => console.error("Enkele bel afspelen mislukt:", e));
+    };
+
+    const playDoubleBell = () => {
+        if (!audioUnlocked) return;
+        dom.doubleBellSound.currentTime = 0;
+        dom.doubleBellSound.play().catch(e => console.error("Dubbele bel afspelen mislukt:", e));
+    };
+
+    const updateTimerDisplay = (seconds) => {
+        dom.timeMinutes.textContent = Math.floor(seconds / 60).toString().padStart(2, '0');
+        dom.timeSeconds.textContent = (seconds % 60).toString().padStart(2, '0');
+    };
+
+    const updateUI = () => {
+        let phaseText = CONFIG.name || '';
+        let bgColor = 'var(--c-bg)';
+        
+        dom.timeDisplay.style.display = 'flex';
+
+        const isFinished = state.phase === 'finished';
+
+        // Bedieningsknoppen tonen/verbergen
+        dom.prevBtn.style.display = isFinished ? 'none' : 'flex';
+        dom.nextBtn.style.display = isFinished ? 'none' : 'flex';
+        dom.pauseBtn.style.display = isFinished ? 'none' : 'flex';
+        dom.stopBtn.style.display = 'flex'; // Stop knop is altijd zichtbaar
+        
+        dom.stopBtn.classList.toggle('text-btn', isFinished);
+        dom.stopBtn.innerHTML = isFinished ? 'Terug' : '⏹';
+        dom.pauseBtn.innerHTML = state.isPaused ? '▶' : '⏸';
+
+        switch (state.phase) {
+            case 'countdown': phaseText = 'Aftellen'; bgColor = 'var(--c-countdown)'; break;
+            case 'work': phaseText = 'Werk'; bgColor = 'var(--c-work)'; break;
+            case 'rest': case 'long-rest': phaseText = 'Rust'; bgColor = 'var(--c-rest)'; break;
+            case 'finished': phaseText = 'Einde'; bgColor = 'var(--c-work)'; break;
+            default: phaseText = CONFIG.name || 'Klaar'; bgColor = 'var(--c-countdown)';
+        }
+        
+        dom.phase.textContent = phaseText;
+        dom.timerWrapper.style.backgroundColor = bgColor;
+        
+        if (isFinished) {
+             dom.timeDisplay.style.display = 'none';
+             dom.progress.textContent = 'Workout voltooid!';
+        } else if (state.phase !== 'stopped') {
+            dom.progress.textContent = `Ronde ${state.currentRound}/${CONFIG.TOTAL_ROUNDS} - Set ${state.currentSet}/${CONFIG.SETS_PER_ROUND}`;
+            updateTimerDisplay(state.timeLeft);
+        } else {
+             dom.progress.textContent = '';
+             updateTimerDisplay(CONFIG.COUNTDOWN);
+        }
+    };
+    
+    const startNextPhase = () => {
+        if (state.phase === 'countdown') {
+            state.phase = 'work';
+            state.timeLeft = CONFIG.WORK;
+        } else if (state.phase === 'work') {
+            const isLastSetOfLastRound = state.currentSet === CONFIG.SETS_PER_ROUND && state.currentRound === CONFIG.TOTAL_ROUNDS;
+            if (isLastSetOfLastRound) {
+                clearInterval(state.intervalId);
+                state.isPaused = true;
+                state.phase = 'finished';
+                releaseWakeLock();
+                updateUI();
+                return;
+            }
+            state.phase = state.currentSet === CONFIG.SETS_PER_ROUND ? 'long-rest' : 'rest';
+            state.timeLeft = state.phase === 'long-rest' ? CONFIG.LONG_REST : CONFIG.REST;
+        } else if (state.phase === 'rest' || state.phase === 'long-rest') {
+             if (state.phase === 'long-rest') {
+                state.currentRound++;
+                state.currentSet = 1;
+            } else {
+                state.currentSet++;
+            }
+            state.phase = 'work';
+            state.timeLeft = CONFIG.WORK;
+        }
+        updateUI();
+    };
+
+    const tick = () => {
+        if (state.isPaused) return;
+
+        if (state.timeLeft === 1) {
+            if (state.phase === 'countdown') {
+                playDoubleBell();
+            } else if (state.phase === 'work') {
+                playSingleBell();
+            } else if (state.phase === 'rest' || state.phase === 'long-rest') {
+                const isLastSet = state.currentSet === CONFIG.SETS_PER_ROUND && state.currentRound === CONFIG.TOTAL_ROUNDS;
+                if (!isLastSet) {
+                    playDoubleBell();
+                }
+            }
+        }
+
+        if (state.timeLeft > 0) {
+            state.timeLeft--;
+        } else {
+            startNextPhase();
+        }
+        updateUI();
+    };
+
+    const handlePauseToggle = () => {
+        unlockAudio();
+        state.isPaused = !state.isPaused;
+
+        if (state.phase === 'stopped') {
+            state.phase = 'countdown'; 
+            state.timeLeft = CONFIG.COUNTDOWN;
+        }
+
+        if (!state.isPaused) {
+            acquireWakeLock();
+            state.intervalId = setInterval(tick, 1000);
+        } else {
+            releaseWakeLock();
+            clearInterval(state.intervalId);
+        }
+        updateUI();
+    };
+    
+    const handleStop = (returnToMenu = true) => {
+        clearInterval(state.intervalId);
+        releaseWakeLock();
+        state.workoutKey = null;
+        resetState();
+        if (returnToMenu) showScreen('selection-screen');
+        else updateUI();
+    };
+    
+    const navigate = (direction) => {
+        clearInterval(state.intervalId);
+        state.isPaused = true;
+        releaseWakeLock();
+
+        const currentPhase = state.phase === 'stopped' ? 'countdown' : state.phase;
+
+        if (direction === 'next') {
+            if (currentPhase === 'work') {
+                const isLastSet = state.currentSet === CONFIG.SETS_PER_ROUND;
+                state.phase = isLastSet ? 'long-rest' : 'rest';
+                state.timeLeft = isLastSet ? CONFIG.LONG_REST : CONFIG.REST;
+            } else {
+                if (currentPhase === 'long-rest') {
+                    state.currentRound++;
+                    state.currentSet = 1;
+                } else if (currentPhase !== 'countdown') {
+                     state.currentSet++;
+                }
+                
+                if (state.currentRound > CONFIG.TOTAL_ROUNDS) {
+                    state.phase = 'finished';
+                    updateUI();
+                    return;
+                }
+                state.phase = 'work';
+                state.timeLeft = CONFIG.WORK;
+            }
+        } else if (direction === 'prev') {
+            if (currentPhase === 'rest' || currentPhase === 'long-rest') {
+                state.phase = 'work';
+                state.timeLeft = CONFIG.WORK;
+            } else {
+                if (state.currentSet === 1 && state.currentRound === 1) return; 
+
+                if (state.currentSet === 1) {
+                    state.currentRound--;
+                    state.currentSet = CONFIG.SETS_PER_ROUND;
+                    state.phase = 'long-rest';
+                    state.timeLeft = CONFIG.LONG_REST;
+                } else {
+                    state.currentSet--;
+                    state.phase = 'rest';
+                    state.timeLeft = CONFIG.REST;
+                }
+            }
+        }
+        updateUI();
+    };
+
+    const handleNext = () => { if (state.phase !== 'finished') navigate('next'); };
+    const handlePrev = () => { if (state.phase !== 'stopped' && state.phase !== 'finished') navigate('prev');};
+    
+    const initializeTimer = (workoutKey) => {
+        CONFIG = workouts.find(w => w.id === workoutKey);
+        state.workoutKey = workoutKey;
+        resetState();
+        showScreen('timer-wrapper');
+        updateUI();
+    };
+
+    const closeAllMenus = () => {
+        document.querySelectorAll('.menu-dropdown').forEach(menu => menu.classList.remove('active'));
+    };
+
+    const toggleMenu = (id) => {
+        const menuToToggle = document.querySelector(`.menu-dropdown[data-id='${id}']`);
+        const isAlreadyActive = menuToToggle.classList.contains('active');
+        closeAllMenus();
+        if (!isAlreadyActive) {
+            menuToToggle.classList.add('active');
+        }
+    };
+
+    // --- EVENT LISTENERS ---
+    
+    dom.newWorkoutBtn.addEventListener('click', () => showEditor());
+    dom.cancelWorkoutBtn.addEventListener('click', () => showScreen('selection-screen'));
+    dom.editorForm.addEventListener('submit', handleSaveWorkout);
+
+    dom.workoutList.addEventListener('click', (e) => {
+        e.preventDefault();
+        const info = e.target.closest('.info');
+        const menuBtn = e.target.closest('.menu-btn');
+        const editBtn = e.target.closest('.edit-btn');
+        const deleteBtn = e.target.closest('.delete-btn');
+        
+        if (menuBtn) { toggleMenu(menuBtn.dataset.id); return; }
+        if (editBtn) { showEditor(workouts.find(w => w.id === Number(editBtn.dataset.id))); closeAllMenus(); return; }
+        if (deleteBtn) { handleDeleteWorkout(Number(deleteBtn.dataset.id)); closeAllMenus(); return; }
+        if (info) { unlockAudio(); initializeTimer(Number(info.dataset.id)); }
+    });
+
+    dom.pauseBtn.addEventListener('click', handlePauseToggle);
+    dom.stopBtn.addEventListener('click', () => { handleStop(true); showScreen('selection-screen'); });
+    dom.nextBtn.addEventListener('click', handleNext);
+    dom.prevBtn.addEventListener('click', handlePrev);
+
+    window.addEventListener('click', (e) => {
+        if (!e.target.closest('.actions')) {
+            closeAllMenus();
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (dom.timerWrapper.classList.contains('active')) {
+            if (e.code === 'Space') { e.preventDefault(); handlePauseToggle(); }
+            if (e.code === 'ArrowRight') handleNext();
+            if (e.code === 'ArrowLeft') handlePrev();
+            if (e.code === 'Escape') { handleStop(true); showScreen('selection-screen'); }
+        } else if (dom.editorScreen.classList.contains('active')) {
+             if (e.code === 'Escape') showScreen('selection-screen');
+        }
+    });
+
+    // --- INITIALISATIE ---
+    loadWorkouts();
+    renderWorkoutList();
+    showScreen('selection-screen');
+
+</script>
+
+</body>
+</html>
