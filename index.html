@@ -6,11 +6,15 @@
     <title>Workout Interval Timer</title>
     <style>
         :root {
-            --c-countdown: #f39c12; /* Oranje */
-            --c-work: #e91e63;      /* Roze */
-            --c-rest: #27ae60;      /* Groen */
-            --c-primary: #3498db;   /* Blauw */
-            --c-text: #ffffff;
+            /* Timer Fase Kleuren */
+            --c-countdown: #f39c12;
+            --c-work: #e91e63;
+            --c-rest: #008A00;
+            
+            /* Thema Beginscherm: Zwart & Goud */
+            --c-primary: #E0B400;
+            --c-text-light: #ffffff;
+            --c-text-dark: #1a1a1a;
             --c-bg: #1a1a1a;
             --c-card-bg: #2c2c2e;
             --c-menu-bg: #444444;
@@ -21,10 +25,10 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-weight: 700;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-weight: 500;
             background-color: var(--c-bg);
-            color: var(--c-text);
+            color: var(--c-text-light);
         }
 
         /* --- Algemene Stijlen --- */
@@ -44,45 +48,53 @@
         }
         
         #selection-screen h1 {
-            font-size: clamp(2rem, 8vw, 4rem);
+            font-size: clamp(2rem, 8vw, 3.5rem);
             margin-bottom: 30px;
             color: var(--c-primary);
+            font-weight: 700;
         }
 
         #workout-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
+            max-width: 1100px;
+            padding: 0 20px;
+            box-sizing: border-box;
             margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) {
+            #workout-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .workout-btn {
             background-color: var(--c-card-bg);
-            padding: 20px;
+            padding: 20px 25px;
             border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            text-align: center;
             display: flex;
             justify-content: space-between;
             align-items: center;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid #444;
         }
         
         .workout-btn:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
 
         .workout-btn .info { text-align: left; cursor: pointer; flex-grow: 1; }
-        .workout-btn .title { font-size: clamp(1.2rem, 4vw, 1.6rem); font-weight: bold; }
-        .workout-btn .details { font-size: clamp(0.8rem, 2vw, 1rem); opacity: 0.7; margin-top: 5px; }
+        .workout-btn .title { font-size: clamp(1.2rem, 4vw, 1.6rem); font-weight: 700; }
+        .workout-btn .details { font-size: clamp(0.8rem, 2vw, 1rem); opacity: 0.7; margin-top: 5px; font-weight: 500;}
         
         .actions { position: relative; }
         .actions .menu-btn {
-            background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; opacity: 0.6;
+            background: none; border: none; color: var(--c-text-light); font-size: 1.8rem; cursor: pointer; opacity: 0.6;
             padding: 10px; line-height: 1;
         }
         .actions .menu-btn:hover { opacity: 1; color: var(--c-primary); }
@@ -100,35 +112,25 @@
         }
         .menu-dropdown.active { display: block; }
         .menu-dropdown a {
-            display: block;
-            padding: 12px 15px;
-            color: white;
-            text-decoration: none;
-            font-size: 1rem;
-            font-weight: normal;
-            text-align: left;
+            display: block; padding: 12px 15px; color: var(--c-text-light);
+            text-decoration: none; font-size: 1rem; font-weight: 500; text-align: left;
         }
         .menu-dropdown a:hover { background-color: rgba(255, 255, 255, 0.1); }
         
         .new-workout-btn {
             background-color: var(--c-primary); border: none; padding: 15px 30px; font-size: 1.2rem;
-            border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: bold; color: white;
+            border-radius: 50px; cursor: pointer; margin-top: 10px; font-weight: 700; color: var(--c-text-dark);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .new-workout-btn:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            box-shadow: 0 5px 15px rgba(224, 180, 0, 0.3);
         }
 
         /* --- Editor Scherm --- */
         #editor-screen {
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            background-color: rgba(0,0,0,0.8);
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+            box-sizing: border-box; background-color: rgba(0,0,0,0.6);
         }
         #editor-form {
             background-color: #222; padding: 30px; border-radius: 15px;
@@ -139,37 +141,58 @@
         .form-group { display: flex; flex-direction: column; }
         .form-group.full-width { grid-column: 1 / -1; }
         .form-group label { margin-bottom: 5px; font-size: 0.9rem; opacity: 0.8; }
-        .form-group input { background: #333; border: 1px solid #555; color: white; padding: 10px; border-radius: 5px; font-size: 1rem; }
+        .form-group input { background: #333; border: 1px solid #555; color: var(--c-text-light); padding: 10px; border-radius: 5px; font-size: 1rem; font-weight: 500;}
         #editor-controls { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 10px; }
-        #editor-controls button { padding: 10px 20px; border-radius: 5px; border: none; font-size: 1rem; cursor: pointer; }
-        #save-workout-btn { background-color: var(--c-primary); color: white; }
-        #cancel-workout-btn { background-color: #555; color: white; }
+        #editor-controls button { padding: 10px 20px; border-radius: 5px; border: none; font-size: 1rem; cursor: pointer; font-weight: 700;}
+        #save-workout-btn { background-color: var(--c-primary); color: var(--c-text-dark); }
+        #cancel-workout-btn { background-color: #555; color: var(--c-text-light); }
 
         /* --- Timerscherm --- */
         #timer-wrapper {
-            flex-direction: column;
-            justify-content: space-between;
-            width: 100%;
-            height: 100%;
-            padding: 5vh 5vw;
-            box-sizing: border-box;
+            flex-direction: column; width: 100%; height: 100%;
+            padding: 0; box-sizing: border-box; position: absolute; top: 0; left: 0;
+            transition: background-color 0.8s ease-in-out;
+        }
+        #progress-bar-container {
             position: absolute; top: 0; left: 0;
-            transition: background-color 0.5s ease-in-out;
+            width: 100%; height: 6px; background-color: rgba(0, 0, 0, 0.15);
         }
-        #display-center {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            flex-grow: 1; text-align: center; position: relative;
+        #progress-bar {
+            height: 100%; width: 100%; background-color: var(--c-text-light);
+            transition: width 1s linear; 
         }
-        #phase-display { text-transform: uppercase; letter-spacing: 2px; font-size: clamp(2rem, 6vw, 3.5rem); font-weight: bold; opacity: 0.9; }
+        
+        #phase-display, #time-display, #progress-display, #controls {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            text-align: center;
+            color: var(--c-text-light);
+        }
+
+        #phase-display { 
+            top: 18vh;
+            text-transform: uppercase; letter-spacing: 3px; font-size: clamp(1.8rem, 5vw, 3rem); 
+            font-weight: 500; opacity: 0.9;
+        }
         #time-display {
-            font-size: clamp(8rem, 25vw, 20rem); line-height: 1; margin: 20px 0;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(8rem, 25vw, 20rem); line-height: 1;
             display: flex; align-items: center; justify-content: center;
         }
         #time-colon { margin: 0 0.15em; transform: translateY(-5%); }
-        #progress-display { font-size: clamp(1.5rem, 4vw, 2.5rem); opacity: 0.8; }
-        #controls { display: flex; justify-content: center; align-items: center; gap: 20px; padding-bottom: 2vh; }
+        #progress-display {
+            bottom: 18vh;
+            font-size: clamp(1.2rem, 3.5vw, 2.2rem); opacity: 0.8; font-weight: 500;
+        }
+        #controls { 
+            bottom: 5vh;
+            display: flex; justify-content: center; align-items: center; gap: 20px;
+        }
         #controls button {
-            background: transparent; border: 2px solid var(--c-text); color: var(--c-text); border-radius: 50%;
+            background: transparent; border: 2px solid var(--c-text-light); color: var(--c-text-light); border-radius: 50%;
             width: 70px; height: 70px; font-size: 1.5rem; cursor: pointer;
             transition: background-color 0.2s, transform 0.2s, visibility 0.2s, width 0.3s ease;
             display: flex; align-items: center; justify-content: center;
@@ -177,25 +200,55 @@
         #controls button:hover { background-color: rgba(255, 255, 255, 0.2); }
         #controls button:active { transform: scale(0.9); }
         #pause-btn { width: 90px; height: 90px; font-size: 2rem; }
-        #controls button.text-btn {
-            width: auto;
-            padding: 10px 40px;
-            border-radius: 50px;
-            font-size: 1.5rem;
+        
+        /* Eindscherm Layout */
+        .finished-view {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
         }
+        #finished-phase {
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            color: var(--c-text-light);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+        #finished-progress {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: var(--c-text-light);
+            opacity: 0.8;
+            margin-top: 10px;
+            margin-bottom: 40px;
+        }
+        #finished-back-btn {
+            width: auto; padding: 12px 40px; border-radius: 50px; font-size: 1.5rem;
+            background-color: var(--c-text-light); color: var(--c-text-dark);
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            transition: transform 0.2s ease;
+        }
+         #finished-back-btn:hover {
+            transform: scale(1.05);
+         }
+
     </style>
 </head>
 <body>
     
     <div id="selection-screen" class="screen active">
-        <h1>Mijn Workouts</h1>
+        <h1>Mijn workouts</h1>
         <div id="workout-list"></div>
-        <button id="new-workout-btn" class="new-workout-btn">+ Nieuwe Workout Maken</button>
+        <button id="new-workout-btn" class="new-workout-btn">Nieuwe workout maken</button>
     </div>
 
     <div id="editor-screen" class="screen">
         <form id="editor-form" autocomplete="off">
-            <h2>Workout Editor</h2>
+            <h2>Workout editor</h2>
             <input type="hidden" id="workout-id">
             <div class="form-group full-width">
                 <label for="workout-name">Naam</label>
@@ -222,7 +275,7 @@
                 <input type="number" id="workout-countdown" value="10" min="0" required>
             </div>
             <div class="form-group">
-                <label for="workout-long-rest">Lange Rust (sec)</label>
+                <label for="workout-long-rest">Lange rust (sec)</label>
                 <input type="number" id="workout-long-rest" value="30" min="0" required>
             </div>
             <div id="editor-controls">
@@ -233,7 +286,10 @@
     </div>
 
     <div id="timer-wrapper" class="screen">
-        <div id="display-center">
+        <div id="timer-active-view">
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
             <div id="phase-display"></div>
             <div id="time-display">
                 <span id="time-minutes">00</span>
@@ -241,13 +297,17 @@
                 <span id="time-seconds">00</span>
             </div>
             <div id="progress-display"></div>
+            <div id="controls">
+                <button id="prev-btn" title="Vorige">⏮</button>
+                <button id="pause-btn" title="Start/Pauze">▶</button>
+                <button id="stop-btn" title="Stoppen">⏹</button>
+                <button id="next-btn" title="Volgende">⏭</button>
+            </div>
         </div>
-
-        <div id="controls">
-            <button id="prev-btn" title="Vorige">⏮</button>
-            <button id="pause-btn" title="Start/Pauze">▶</button>
-            <button id="stop-btn" title="Stoppen">⏹</button>
-            <button id="next-btn" title="Volgende">⏭</button>
+        <div id="timer-finished-view" class="finished-view">
+            <div id="finished-phase">Einde</div>
+            <div id="finished-progress">Workout voltooid!</div>
+            <button id="finished-back-btn">Terug</button>
         </div>
     </div>
     
@@ -259,8 +319,8 @@
 
     const DEFAULT_WORKOUTS = [
         { id: 1, name: 'Warming-up', COUNTDOWN: 10, WORK: 20, REST: 10, LONG_REST: 30, SETS_PER_ROUND: 3, TOTAL_ROUNDS: 3 },
-        { id: 2, name: 'Circuit 6 Oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 8, TOTAL_ROUNDS: 3 },
-        { id: 3, name: 'Circuit 8 Oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 6, TOTAL_ROUNDS: 4 },
+        { id: 2, name: 'Circuit 6 oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 8, TOTAL_ROUNDS: 3 },
+        { id: 3, name: 'Circuit 8 oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 6, TOTAL_ROUNDS: 4 },
         { id: 4, name: 'Core', COUNTDOWN: 10, WORK: 30, REST: 10, LONG_REST: 30, SETS_PER_ROUND: 3, TOTAL_ROUNDS: 3 }
     ];
 
@@ -269,10 +329,11 @@
         selectionScreen: document.getElementById('selection-screen'),
         editorScreen: document.getElementById('editor-screen'),
         timerWrapper: document.getElementById('timer-wrapper'),
+        timerActiveView: document.getElementById('timer-active-view'),
+        timerFinishedView: document.getElementById('timer-finished-view'),
         workoutList: document.getElementById('workout-list'),
         newWorkoutBtn: document.getElementById('new-workout-btn'),
         editorForm: document.getElementById('editor-form'),
-        workoutIdInput: document.getElementById('workout-id'),
         cancelWorkoutBtn: document.getElementById('cancel-workout-btn'),
         phase: document.getElementById('phase-display'),
         progress: document.getElementById('progress-display'),
@@ -280,10 +341,12 @@
         timeMinutes: document.getElementById('time-minutes'),
         timeColon: document.getElementById('time-colon'),
         timeSeconds: document.getElementById('time-seconds'),
+        progressBar: document.getElementById('progress-bar'),
         prevBtn: document.getElementById('prev-btn'),
         pauseBtn: document.getElementById('pause-btn'),
         stopBtn: document.getElementById('stop-btn'),
         nextBtn: document.getElementById('next-btn'),
+        finishedBackBtn: document.getElementById('finished-back-btn'),
         singleBellSound: document.getElementById('single-bell-sound'),
         doubleBellSound: document.getElementById('double-bell-sound')
     };
@@ -317,7 +380,7 @@
             workoutCard.innerHTML = `
                 <div class="info" data-id="${w.id}">
                     <div class="title">${w.name}</div>
-                    <div class="details">${w.TOTAL_ROUNDS} Ronden / ${w.SETS_PER_ROUND} Sets / ${w.WORK}s Werk / ${w.REST}s Rust</div>
+                    <div class="details">${w.TOTAL_ROUNDS} Rondes / ${w.SETS_PER_ROUND} Sets / ${w.WORK}s Werk / ${w.REST}s Rust</div>
                 </div>
                 <div class="actions">
                     <button class="menu-btn" data-id="${w.id}" title="Menu">⋮</button>
@@ -333,13 +396,13 @@
 
     const showEditor = (workout = null) => {
         dom.editorForm.reset();
-        dom.workoutIdInput.value = '';
+        document.getElementById('workout-id').value = '';
         if (workout) {
-            dom.workoutIdInput.value = workout.id;
+            document.getElementById('workout-id').value = workout.id;
             ['name', 'countdown', 'work', 'rest', 'sets', 'rounds', 'long-rest'].forEach(field => {
                 const keyMap = { sets: 'SETS_PER_ROUND', rounds: 'TOTAL_ROUNDS', 'long-rest': 'LONG_REST' };
                 const configKey = keyMap[field] || field.toUpperCase();
-                dom.editorForm.querySelector(`#workout-${field}`).value = workout[configKey];
+                document.getElementById(`workout-${field}`).value = workout[configKey];
             });
         }
         showScreen('editor-screen');
@@ -347,16 +410,16 @@
 
     const handleSaveWorkout = (event) => {
         event.preventDefault();
-        const id = dom.workoutIdInput.value ? Number(dom.workoutIdInput.value) : Date.now();
+        const id = document.getElementById('workout-id').value ? Number(document.getElementById('workout-id').value) : Date.now();
         const newWorkout = {
             id,
-            name: dom.editorForm.querySelector('#workout-name').value || 'Mijn Workout',
-            COUNTDOWN: Number(dom.editorForm.querySelector('#workout-countdown').value),
-            WORK: Number(dom.editorForm.querySelector('#workout-work').value),
-            REST: Number(dom.editorForm.querySelector('#workout-rest').value),
-            SETS_PER_ROUND: Number(dom.editorForm.querySelector('#workout-sets').value),
-            TOTAL_ROUNDS: Number(dom.editorForm.querySelector('#workout-rounds').value),
-            LONG_REST: Number(dom.editorForm.querySelector('#workout-long-rest').value),
+            name: document.getElementById('workout-name').value || 'Mijn Workout',
+            COUNTDOWN: Number(document.getElementById('workout-countdown').value),
+            WORK: Number(document.getElementById('workout-work').value),
+            REST: Number(document.getElementById('workout-rest').value),
+            SETS_PER_ROUND: Number(document.getElementById('workout-sets').value),
+            TOTAL_ROUNDS: Number(document.getElementById('workout-rounds').value),
+            LONG_REST: Number(document.getElementById('workout-long-rest').value),
         };
 
         const index = workouts.findIndex(w => w.id === id);
@@ -378,16 +441,13 @@
 
     const acquireWakeLock = async () => {
         if ('wakeLock' in navigator) {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) { console.error(`${err.name}, ${err.message}`); }
+            try { wakeLock = await navigator.wakeLock.request('screen'); }
+            catch (err) { console.error(`${err.name}, ${err.message}`); }
         }
     };
 
     const releaseWakeLock = () => {
-        if (wakeLock) {
-            wakeLock.release().then(() => { wakeLock = null; });
-        }
+        if (wakeLock) { wakeLock.release().then(() => { wakeLock = null; }); }
     };
     
     const unlockAudio = () => {
@@ -402,12 +462,9 @@
     const resetState = () => {
         state = {
             workoutKey: state.workoutKey,
-            currentRound: 1,
-            currentSet: 1,
-            phase: 'stopped',
-            timeLeft: CONFIG.COUNTDOWN,
-            intervalId: null,
-            isPaused: true
+            currentRound: 1, currentSet: 1, phase: 'stopped',
+            timeLeft: CONFIG.COUNTDOWN, totalTime: CONFIG.COUNTDOWN,
+            intervalId: null, isPaused: true
         };
     };
 
@@ -427,52 +484,56 @@
         dom.timeMinutes.textContent = Math.floor(seconds / 60).toString().padStart(2, '0');
         dom.timeSeconds.textContent = (seconds % 60).toString().padStart(2, '0');
     };
+    
+    const updateProgressBar = () => {
+        const percent = (state.totalTime > 0) ? (state.timeLeft / state.totalTime) * 100 : 100;
+        dom.progressBar.style.width = `${percent}%`;
+    };
+    
+    const resetProgressBarAnimation = () => {
+        dom.progressBar.style.transition = 'none';
+        dom.progressBar.style.width = '100%';
+        void dom.progressBar.offsetHeight; 
+        dom.progressBar.style.transition = 'width 1s linear';
+    };
 
     const updateUI = () => {
-        let phaseText = CONFIG.name || '';
-        let bgColor = 'var(--c-bg)';
-        
-        dom.timeDisplay.style.display = 'flex';
-
         const isFinished = state.phase === 'finished';
 
-        // Bedieningsknoppen tonen/verbergen
-        dom.prevBtn.style.display = isFinished ? 'none' : 'flex';
-        dom.nextBtn.style.display = isFinished ? 'none' : 'flex';
-        dom.pauseBtn.style.display = isFinished ? 'none' : 'flex';
-        dom.stopBtn.style.display = 'flex'; // Stop knop is altijd zichtbaar
-        
-        dom.stopBtn.classList.toggle('text-btn', isFinished);
-        dom.stopBtn.innerHTML = isFinished ? 'Terug' : '⏹';
-        dom.pauseBtn.innerHTML = state.isPaused ? '▶' : '⏸';
+        dom.timerActiveView.style.display = isFinished ? 'none' : 'block';
+        dom.timerFinishedView.style.display = isFinished ? 'flex' : 'none';
 
-        switch (state.phase) {
-            case 'countdown': phaseText = 'Aftellen'; bgColor = 'var(--c-countdown)'; break;
-            case 'work': phaseText = 'Werk'; bgColor = 'var(--c-work)'; break;
-            case 'rest': case 'long-rest': phaseText = 'Rust'; bgColor = 'var(--c-rest)'; break;
-            case 'finished': phaseText = 'Einde'; bgColor = 'var(--c-work)'; break;
-            default: phaseText = CONFIG.name || 'Klaar'; bgColor = 'var(--c-countdown)';
-        }
-        
-        dom.phase.textContent = phaseText;
-        dom.timerWrapper.style.backgroundColor = bgColor;
-        
         if (isFinished) {
-             dom.timeDisplay.style.display = 'none';
-             dom.progress.textContent = 'Workout voltooid!';
-        } else if (state.phase !== 'stopped') {
-            dom.progress.textContent = `Ronde ${state.currentRound}/${CONFIG.TOTAL_ROUNDS} - Set ${state.currentSet}/${CONFIG.SETS_PER_ROUND}`;
-            updateTimerDisplay(state.timeLeft);
+            dom.timerWrapper.style.backgroundColor = 'var(--c-work)';
         } else {
-             dom.progress.textContent = '';
-             updateTimerDisplay(CONFIG.COUNTDOWN);
+            let phaseText = '';
+            let bgColor = 'var(--c-bg)';
+            
+            switch (state.phase) {
+                case 'countdown': phaseText = 'Aftellen'; bgColor = 'var(--c-countdown)'; break;
+                case 'work': phaseText = 'Werk'; bgColor = 'var(--c-work)'; break;
+                case 'rest': case 'long-rest': phaseText = 'Rust'; bgColor = 'var(--c-rest)'; break;
+                default: phaseText = CONFIG.name || 'Klaar'; bgColor = 'var(--c-countdown)';
+            }
+            
+            dom.phase.textContent = phaseText;
+            dom.timerWrapper.style.backgroundColor = bgColor;
+            
+            if (state.phase !== 'stopped') {
+                dom.progress.textContent = `Ronde ${state.currentRound}/${CONFIG.TOTAL_ROUNDS} - Set ${state.currentSet}/${CONFIG.SETS_PER_ROUND}`;
+                updateTimerDisplay(state.timeLeft);
+            } else {
+                dom.progress.textContent = '';
+                updateTimerDisplay(CONFIG.COUNTDOWN);
+            }
+            updateProgressBar();
         }
     };
     
     const startNextPhase = () => {
         if (state.phase === 'countdown') {
             state.phase = 'work';
-            state.timeLeft = CONFIG.WORK;
+            state.timeLeft = state.totalTime = CONFIG.WORK;
         } else if (state.phase === 'work') {
             const isLastSetOfLastRound = state.currentSet === CONFIG.SETS_PER_ROUND && state.currentRound === CONFIG.TOTAL_ROUNDS;
             if (isLastSetOfLastRound) {
@@ -484,7 +545,7 @@
                 return;
             }
             state.phase = state.currentSet === CONFIG.SETS_PER_ROUND ? 'long-rest' : 'rest';
-            state.timeLeft = state.phase === 'long-rest' ? CONFIG.LONG_REST : CONFIG.REST;
+            state.timeLeft = state.totalTime = state.phase === 'long-rest' ? CONFIG.LONG_REST : CONFIG.REST;
         } else if (state.phase === 'rest' || state.phase === 'long-rest') {
              if (state.phase === 'long-rest') {
                 state.currentRound++;
@@ -493,8 +554,9 @@
                 state.currentSet++;
             }
             state.phase = 'work';
-            state.timeLeft = CONFIG.WORK;
+            state.timeLeft = state.totalTime = CONFIG.WORK;
         }
+        resetProgressBarAnimation();
         updateUI();
     };
 
@@ -502,33 +564,30 @@
         if (state.isPaused) return;
 
         if (state.timeLeft === 1) {
-            if (state.phase === 'countdown') {
-                playDoubleBell();
-            } else if (state.phase === 'work') {
-                playSingleBell();
-            } else if (state.phase === 'rest' || state.phase === 'long-rest') {
+            if (state.phase === 'countdown') playDoubleBell();
+            else if (state.phase === 'work') playSingleBell();
+            else if (state.phase === 'rest' || state.phase === 'long-rest') {
                 const isLastSet = state.currentSet === CONFIG.SETS_PER_ROUND && state.currentRound === CONFIG.TOTAL_ROUNDS;
-                if (!isLastSet) {
-                    playDoubleBell();
-                }
+                if (!isLastSet) playDoubleBell();
             }
         }
 
-        if (state.timeLeft > 0) {
-            state.timeLeft--;
-        } else {
-            startNextPhase();
-        }
+        if (state.timeLeft > 0) state.timeLeft--;
+        else startNextPhase();
+        
         updateUI();
     };
 
     const handlePauseToggle = () => {
+        if (state.phase === 'finished') { initializeTimer(state.workoutKey); return; }
+        
         unlockAudio();
         state.isPaused = !state.isPaused;
 
         if (state.phase === 'stopped') {
             state.phase = 'countdown'; 
-            state.timeLeft = CONFIG.COUNTDOWN;
+            state.timeLeft = state.totalTime = CONFIG.COUNTDOWN;
+            resetProgressBarAnimation();
         }
 
         if (!state.isPaused) {
@@ -555,18 +614,18 @@
         state.isPaused = true;
         releaseWakeLock();
 
-        const currentPhase = state.phase === 'stopped' ? 'countdown' : state.phase;
+        const currentPhase = state.phase;
 
         if (direction === 'next') {
             if (currentPhase === 'work') {
                 const isLastSet = state.currentSet === CONFIG.SETS_PER_ROUND;
                 state.phase = isLastSet ? 'long-rest' : 'rest';
-                state.timeLeft = isLastSet ? CONFIG.LONG_REST : CONFIG.REST;
+                state.timeLeft = state.totalTime = isLastSet ? CONFIG.LONG_REST : CONFIG.REST;
             } else {
                 if (currentPhase === 'long-rest') {
                     state.currentRound++;
                     state.currentSet = 1;
-                } else if (currentPhase !== 'countdown') {
+                } else if (currentPhase !== 'countdown' && currentPhase !== 'stopped') {
                      state.currentSet++;
                 }
                 
@@ -576,27 +635,32 @@
                     return;
                 }
                 state.phase = 'work';
-                state.timeLeft = CONFIG.WORK;
+                state.timeLeft = state.totalTime = CONFIG.WORK;
             }
         } else if (direction === 'prev') {
+             if (currentPhase === 'stopped') return;
+             if (currentPhase === 'countdown') return;
+
             if (currentPhase === 'rest' || currentPhase === 'long-rest') {
                 state.phase = 'work';
-                state.timeLeft = CONFIG.WORK;
-            } else {
-                if (state.currentSet === 1 && state.currentRound === 1) return; 
-
-                if (state.currentSet === 1) {
+                state.timeLeft = state.totalTime = CONFIG.WORK;
+            } else if (currentPhase === 'work') {
+                if (state.currentSet === 1 && state.currentRound === 1) {
+                    state.phase = 'countdown';
+                    state.timeLeft = state.totalTime = CONFIG.COUNTDOWN;
+                } else if (state.currentSet === 1) {
                     state.currentRound--;
                     state.currentSet = CONFIG.SETS_PER_ROUND;
                     state.phase = 'long-rest';
-                    state.timeLeft = CONFIG.LONG_REST;
+                    state.timeLeft = state.totalTime = CONFIG.LONG_REST;
                 } else {
                     state.currentSet--;
                     state.phase = 'rest';
-                    state.timeLeft = CONFIG.REST;
+                    state.timeLeft = state.totalTime = CONFIG.REST;
                 }
             }
         }
+        resetProgressBarAnimation();
         updateUI();
     };
 
@@ -645,6 +709,7 @@
 
     dom.pauseBtn.addEventListener('click', handlePauseToggle);
     dom.stopBtn.addEventListener('click', () => { handleStop(true); showScreen('selection-screen'); });
+    dom.finishedBackBtn.addEventListener('click', () => { handleStop(true); showScreen('selection-screen'); });
     dom.nextBtn.addEventListener('click', handleNext);
     dom.prevBtn.addEventListener('click', handlePrev);
 
@@ -656,10 +721,14 @@
 
     window.addEventListener('keydown', (e) => {
         if (dom.timerWrapper.classList.contains('active')) {
-            if (e.code === 'Space') { e.preventDefault(); handlePauseToggle(); }
-            if (e.code === 'ArrowRight') handleNext();
-            if (e.code === 'ArrowLeft') handlePrev();
-            if (e.code === 'Escape') { handleStop(true); showScreen('selection-screen'); }
+             if (state.phase === 'finished') {
+                if (e.code === 'Enter' || e.code === 'Space') { handleStop(true); showScreen('selection-screen'); }
+             } else {
+                if (e.code === 'Space') { e.preventDefault(); handlePauseToggle(); }
+                if (e.code === 'ArrowRight') handleNext();
+                if (e.code === 'ArrowLeft') handlePrev();
+                if (e.code === 'Escape') { handleStop(true); showScreen('selection-screen'); }
+            }
         } else if (dom.editorScreen.classList.contains('active')) {
              if (e.code === 'Escape') showScreen('selection-screen');
         }
