@@ -78,14 +78,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            border: 1px solid #444;
+            border: 2px solid transparent;
         }
         
         .workout-btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+        
+        .workout-btn.selected {
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--c-primary);
+            box-shadow: 0 8px 25px rgba(224, 180, 0, 0.2);
         }
 
         .workout-btn .info { text-align: left; cursor: pointer; flex-grow: 1; }
@@ -319,8 +325,8 @@
 
     const DEFAULT_WORKOUTS = [
         { id: 1, name: 'Warming-up', COUNTDOWN: 10, WORK: 20, REST: 10, LONG_REST: 30, SETS_PER_ROUND: 3, TOTAL_ROUNDS: 3 },
-        { id: 2, name: 'Circuit 6 Oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 8, TOTAL_ROUNDS: 3 },
-        { id: 3, name: 'Circuit 8 Oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 6, TOTAL_ROUNDS: 4 },
+        { id: 2, name: 'Circuit 6 oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 8, TOTAL_ROUNDS: 3 },
+        { id: 3, name: 'Circuit 8 oefeningen', COUNTDOWN: 10, WORK: 30, REST: 20, LONG_REST: 40, SETS_PER_ROUND: 6, TOTAL_ROUNDS: 4 },
         { id: 4, name: 'Core', COUNTDOWN: 10, WORK: 30, REST: 10, LONG_REST: 30, SETS_PER_ROUND: 3, TOTAL_ROUNDS: 3 }
     ];
 
@@ -356,10 +362,14 @@
     let audioUnlocked = false;
     let wakeLock = null;
     let workouts = [];
+    let selectedWorkoutIndex = -1;
 
     const showScreen = (screenId) => {
         dom.screens.forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
+        if (screenId === 'selection-screen') {
+            selectedWorkoutIndex = -1; // Reset selectie bij terugkeer
+        }
     };
 
     const loadWorkouts = () => {
@@ -392,6 +402,7 @@
             `;
             dom.workoutList.appendChild(workoutCard);
         });
+        updateSelection(-1);
     };
 
     const showEditor = (workout = null) => {
@@ -687,6 +698,17 @@
         }
     };
 
+    const updateSelection = (newIndex) => {
+        const workoutBtns = dom.workoutList.querySelectorAll('.workout-btn');
+        if(selectedWorkoutIndex > -1 && workoutBtns[selectedWorkoutIndex]) {
+            workoutBtns[selectedWorkoutIndex].classList.remove('selected');
+        }
+        selectedWorkoutIndex = newIndex;
+        if(selectedWorkoutIndex > -1 && workoutBtns[selectedWorkoutIndex]) {
+            workoutBtns[selectedWorkoutIndex].classList.add('selected');
+        }
+    };
+    
     // --- EVENT LISTENERS ---
     
     dom.newWorkoutBtn.addEventListener('click', () => showEditor());
@@ -719,7 +741,32 @@
     });
 
     window.addEventListener('keydown', (e) => {
-        if (dom.timerWrapper.classList.contains('active')) {
+        if (dom.selectionScreen.classList.contains('active')) {
+            const workoutBtns = dom.workoutList.querySelectorAll('.workout-btn .info');
+            if (!workoutBtns.length) return;
+
+            let newIndex = selectedWorkoutIndex;
+
+            if (e.code === 'ArrowDown' || e.code === 'ArrowRight') {
+                e.preventDefault();
+                newIndex = selectedWorkoutIndex < 0 ? 0 : (selectedWorkoutIndex + 1) % workoutBtns.length;
+            } else if (e.code === 'ArrowUp' || e.code === 'ArrowLeft') {
+                e.preventDefault();
+                newIndex = selectedWorkoutIndex <= 0 ? workoutBtns.length - 1 : selectedWorkoutIndex - 1;
+            } else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+                if (selectedWorkoutIndex > -1) {
+                    e.preventDefault();
+                    const selectedBtn = workoutBtns[selectedWorkoutIndex];
+                    unlockAudio();
+                    initializeTimer(Number(selectedBtn.dataset.id));
+                }
+            }
+            
+            if (newIndex !== selectedWorkoutIndex) {
+                updateSelection(newIndex);
+            }
+
+        } else if (dom.timerWrapper.classList.contains('active')) {
              if (state.phase === 'finished') {
                 if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') { 
                     handleStop(true); 
